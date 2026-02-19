@@ -1,0 +1,60 @@
+﻿@startuml
+title Use Cases — Notes App with Per-Note Edit Locking
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "Session A\n(User)" as A
+actor "Session B\n(User)" as B
+
+rectangle "Notes Application" as System {
+  usecase "View notes list\n(GET /notes)" as UC_List
+  usecase "See lock status\n(Unlocked / Locked until...)" as UC_Status
+  usecase "Start editing note\n(POST /notes/:id/lock)" as UC_Lock
+  usecase "Renew lock while editing\n(heartbeat)" as UC_Renew
+  usecase "Edit content locally\n(textarea)" as UC_Edit
+  usecase "Save note\n(PUT /notes/:id)" as UC_Save
+  usecase "Release lock\n(DELETE /notes/:id/lock)" as UC_Unlock
+  usecase "Cancel editing\n(discard + unlock)" as UC_Cancel
+  usecase "Handle lock denied\n(423 Locked)" as UC_Denied
+  usecase "Lock expires automatically\n(TTL)" as UC_Expire
+  usecase "Best-effort unlock on close\n(optional)" as UC_Close
+}
+
+A --> UC_List
+A --> UC_Lock
+A --> UC_Renew
+A --> UC_Edit
+A --> UC_Save
+A --> UC_Cancel
+A --> UC_Close
+A --> UC_Status
+
+B --> UC_List
+B --> UC_Lock
+B --> UC_Status
+B --> UC_Denied
+
+UC_List --> UC_Status : includes
+UC_Lock --> UC_Edit : if granted (200)
+UC_Edit --> UC_Save : choose
+UC_Edit --> UC_Cancel : choose
+
+UC_Save --> UC_Unlock : on success
+UC_Cancel --> UC_Unlock : always
+
+UC_Expire ..> UC_Lock : enables takeover\nwhen expires
+UC_Close ..> UC_Unlock : best effort\n(no correctness dependency)
+
+UC_Denied ..> UC_Status : show "Locked by ... until ..."
+
+note bottom of System
+Key correctness rules:
+- Update requires valid lock
+- Deny cross-session edits (423)
+- Expiration makes abandoned locks safe
+- Atomic acquisition prevents double-locks under race
+end note
+
+@enduml

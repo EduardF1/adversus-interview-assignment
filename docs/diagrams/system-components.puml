@@ -1,0 +1,68 @@
+@startuml
+title System Components — Adversus Notes App (Full Stack)
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "User\n(Browser Session)" as User
+
+package "Frontend (Vite + React + TS)" as FE {
+  [App.tsx\n(UI State)] as App
+  [notes.api.ts\n(API Facade)] as Api
+  [http.client.ts\n(fetch wrapper)] as Http
+  [session.identity.ts\n(localStorage sessionId)] as Session
+  App --> Api : calls
+  Api --> Http : HTTP requests
+  Http --> Session : adds x-session-id
+}
+
+package "Backend (Node + Fastify + TS)" as BE {
+  [Fastify Routes\n(app.ts)] as Routes
+  [Lock Service\n(locks.ts)] as Locks
+  [DB Adapter\n(db.ts)] as DB
+  [Config\n(config.ts)] as Config
+
+  Routes --> Locks : lock rules\n(acquire/renew/release)
+  Routes --> DB : query notes\n(best-effort cleanup)
+  Locks --> DB : atomic upsert\n+ validation
+  Routes --> Config : env flags\n(E2E, TTL)
+}
+
+database "MySQL\n(Docker Compose)" as MySQL
+
+cloud "Docker Compose\nInfrastructure" as Infra {
+  [mysql container] as MySQLC
+}
+
+Routes --> MySQL : mysql2 driver
+MySQLC --> MySQL : persistent storage
+
+package "Testing" as Tests {
+  [Backend Integration Tests\n(locks.integration.test.ts)] as IT
+  [Smoke Tests\n(smoke-locks.ps1)] as Smoke
+  [Playwright E2E\n(frontend/e2e)] as E2E
+
+  IT --> Routes : Fastify inject / HTTP
+  Smoke --> Routes : curl HTTP
+  E2E --> App : drives UI
+  E2E --> Routes : real backend\n(+ /__test__/reset when E2E=1)
+}
+
+User --> App : interacts (view/edit)
+App --> Routes : GET /notes\nPOST /notes/:id/lock\nPUT /notes/:id\nDELETE /notes/:id/lock
+
+note right of Routes
+Backend is source of truth:
+- computes lock status
+- enforces lock checks on update
+- persists locks in MySQL
+end note
+
+note bottom of E2E
+Determinism:
+E2E uses two browser contexts + optional reset endpoint
+enabled only when E2E=1
+end note
+
+@enduml
