@@ -23,6 +23,12 @@ pnpm-debug.log*
 # Build output
 dist/
 build/
+coverage/
+
+# Tool caches
+.turbo/
+.parcel-cache/
+.next/
 
 ############################################
 # Backend specific
@@ -74,3 +80,9 @@ docker-data/
 
 .DS_Store
 Thumbs.db
+
+############################################
+# Artifacts
+############################################
+
+*.zip
