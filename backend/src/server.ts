@@ -1,22 +1,9 @@
-﻿import Fastify from "fastify";
-import cors from "@fastify/cors";
-import { config } from "./config";
+﻿import {buildApp} from "./app.js";
+import {config} from "./config.js";
 
-async function main() {
-    const app = Fastify({ logger: true });
+const app = buildApp();
 
-    await app.register(cors, {
-        origin: true,
-        allowedHeaders: ["Content-Type", "X-Session-Id"],
-    });
-
-    app.get("/health", async () => ({ ok: true }));
-
-    await app.listen({ port: config.port, host: "0.0.0.0" });
-    app.log.info(`Server running on http://localhost:${config.port}`);
-}
-
-main().catch((err) => {
-    console.error(err);
+app.listen({port: config.port, host: "0.0.0.0"}).catch((error) => {
+    app.log.error(error);
     process.exit(1);
 });

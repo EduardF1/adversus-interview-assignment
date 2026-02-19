@@ -1,17 +1,26 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "type": "commonjs",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:full": "node scripts/dev-full.mjs",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+
+    "test": "node --test dist/test/**/*.test.js",
+    "test:watch": "node --test --watch dist/test/**/*.test.js",
+
+    "smoke:locks": "powershell -ExecutionPolicy Bypass -File scripts/smoke-locks.ps1",
+
+    "verify": "npm run build && npm run test",
+    "verify:smoke": "npm run smoke:locks",
+    "verify:all": "npm run build && npm run test && npm run smoke:locks",
+
+    "test:full": "node scripts/test-full.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "dotenv": "^17.3.1",
