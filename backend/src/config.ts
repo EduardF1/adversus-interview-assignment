@@ -1,31 +1,44 @@
 ﻿import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-/**
- * Reads a required environment variable or throws with a clear message.
- */
-function requireEnv(variableName: string): string {
-    const value = process.env[variableName];
-    if (!value) throw new Error(`Missing env var: ${variableName}`);
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+function requireEnv(name: string): string {
+    const value = process.env[name];
+    if (!value) throw new Error(`Missing env var: ${name}`);
     return value;
 }
 
-/**
- * Central configuration for the backend.
- *
- * Conventions:
- * - Use UTC timestamps in SQL (UTC_TIMESTAMP()).
- * - `LOCK_TTL_SECONDS` defines how long a lock is valid without renewal.
- */
+function readIntEnv(name: string, fallback: number): number {
+    const raw = process.env[name];
+    if (!raw) return fallback;
+
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed)) throw new Error(`Env var ${name} must be an integer (got: "${raw}")`);
+    return parsed;
+}
+
+function clampInt(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
+
+const port = readIntEnv("PORT", 8080);
+
+const lockTtlSecondsRaw = readIntEnv("LOCK_TTL_SECONDS", 120);
+const lockTtlSeconds = clampInt(lockTtlSecondsRaw, 10, 10 * 60);
+
 export const config = {
-    port: Number(process.env.PORT ?? 8080),
+    port,
     db: {
         host: requireEnv("DB_HOST"),
-        port: Number(process.env.DB_PORT ?? 3306),
+        port: readIntEnv("DB_PORT", 3306),
         user: requireEnv("DB_USER"),
         password: requireEnv("DB_PASSWORD"),
         database: requireEnv("DB_NAME"),
     },
-    lockTtlSeconds: Number(process.env.LOCK_TTL_SECONDS ?? 120),
+    lockTtlSeconds,
 } as const;
